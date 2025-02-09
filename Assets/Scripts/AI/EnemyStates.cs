@@ -31,7 +31,7 @@ namespace AI
                     UpdateWaiting(agent);
                     break;
                 case PatrolState.Moving:
-                    UpdateMovement(agent);
+                    UpdateMoving(agent);
                     break;
             }
         }
@@ -62,11 +62,19 @@ namespace AI
                 StartMoving(agent);
                 return;
             }
+            
+            // Sometimes if you come from another state, the nav mesh agent won't know
+            // that it should be moving, do that here:
+            var currentWaypointPosition = GetCurrentWaypointPosition(agent);
+            if ((currentWaypointPosition - agent.NavMeshAgent.destination).sqrMagnitude > 0.1)
+                agent.NavMeshAgent.destination = agent.Waypoints[_currentWaypoint].position;
                 
             _waitTimer += Time.deltaTime;
         }
+        
+        private Vector3 GetCurrentWaypointPosition(EnemyAgent agent) => agent.Waypoints[_currentWaypoint].position;
 
-        private void UpdateMovement(EnemyAgent agent)
+        private void UpdateMoving(EnemyAgent agent)
         {
             // If too far, just keep moving
             if (agent.NavMeshAgent.remainingDistance > agent.ToleranceDistance)
