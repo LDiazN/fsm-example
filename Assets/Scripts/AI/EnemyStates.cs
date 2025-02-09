@@ -1,17 +1,39 @@
+using UnityEngine;
+
 namespace AI
 {
     public class Patrol : IState
     {
+        private int _currentWaypoint;
+
+        private enum PatrolState
+        {
+            Waiting,
+            Moving,
+        }
+        private PatrolState _state = PatrolState.Waiting;
+        private float _waitTimer;
+        
         public void Execute(EnemyAgent agent)
         {
+            // If should change to a new state, 
+            // change and return
             var nextState = GetNextState(agent);
             if (nextState != EnemyAgent.State.Patrol)
             {
                 agent.ChangeState(nextState);
                 return;
             }
-                
-            
+
+            switch (_state)
+            {
+                case PatrolState.Waiting:
+                    UpdateWaiting(agent);
+                    break;
+                case PatrolState.Moving:
+                    UpdateMovement(agent);
+                    break;
+            }
         }
 
         private EnemyAgent.State GetNextState(EnemyAgent agent)
@@ -24,6 +46,44 @@ namespace AI
                 return EnemyAgent.State.Alert;
 
             return EnemyAgent.State.Patrol;
+        }
+
+        private void UpdateWaiting(EnemyAgent agent)
+        {
+            // If no waypoints, just stay here 
+            if (agent.Waypoints.Count == 0)
+                return;
+            
+            // Waited enough, reset timer, update waypoint and move
+            if (_waitTimer > agent.TimeToWait)
+            {
+                _waitTimer = 0;
+                _currentWaypoint = (_currentWaypoint + 1) % agent.Waypoints.Count;
+                StartMoving(agent);
+                return;
+            }
+                
+            _waitTimer += Time.deltaTime;
+        }
+
+        private void UpdateMovement(EnemyAgent agent)
+        {
+            // If too far, just keep moving
+            if (agent.NavMeshAgent.remainingDistance > agent.ToleranceDistance)
+                return;
+            
+            StartWaiting();
+        }
+
+        private void StartMoving(EnemyAgent agent)
+        {
+            _state = PatrolState.Moving;
+            agent.NavMeshAgent.destination = agent.Waypoints[_currentWaypoint].position;
+        }
+
+        private void StartWaiting()
+        {
+            _state = PatrolState.Waiting;
         }
     }
     

@@ -1,6 +1,10 @@
+using System;
 using System.ComponentModel;
 using AI;
 using UnityEngine;
+using System.Collections.Generic;
+using UnityEngine.AI;
+using UnityEngine.Serialization;
 
 public class EnemyAgent : MonoBehaviour
 {
@@ -44,6 +48,17 @@ public class EnemyAgent : MonoBehaviour
     [Description("How far can this enemy hear the player. Depicted by yellow Gizmo")] [SerializeField]
     private float hearDistance = 1.5f;
 
+    [Header("Patrol")] 
+    [SerializeField] private List<Transform> waypoints;
+    public List<Transform> Waypoints => waypoints;
+
+    [Description("Time (in seconds) to wait in each waypoint before going to the next")]
+    [SerializeField] private float timeToWait = 2;
+    public float TimeToWait => timeToWait;
+
+    [Description("How near the agent should be to the waypoint to consider it within the waypoint")]
+    [SerializeField] private float toleranceDistance = 0.1f;
+    public float ToleranceDistance => toleranceDistance;
     // --------------------------------------------------
 
     #endregion
@@ -52,18 +67,23 @@ public class EnemyAgent : MonoBehaviour
 
     // --------------------------------------------------
     private PlayerController _playerController;
+    private NavMeshAgent _navMeshAgent;
+    public NavMeshAgent NavMeshAgent => _navMeshAgent;
     // --------------------------------------------------
 
     #endregion
 
-    // Start is called before the first frame update
+    private void Awake()
+    {
+        _navMeshAgent = GetComponent<NavMeshAgent>();
+    }
+
     void Start()
     {
         InitState();
         _playerController = FindObjectOfType<PlayerController>();
     }
 
-    // Update is called once per frame
     void Update()
     {
         UpdatePerceptions();
