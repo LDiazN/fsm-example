@@ -125,7 +125,15 @@ public class EnemyAgent : MonoBehaviour
 
     private bool CanHearPlayer()
     {
-        return true;
+        Vector3 playerPosition = _playerController.transform.position;
+        var toPlayer = playerPosition - transform.position;
+        
+        // If too far, return false
+        if (toPlayer.sqrMagnitude > hearDistance * hearDistance)
+            return false;
+
+        // Player only makes noise when moving
+        return _playerController.IsWalking();
     }
 
     private void OnDrawGizmos()
