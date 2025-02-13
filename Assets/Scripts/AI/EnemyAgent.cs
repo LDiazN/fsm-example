@@ -63,8 +63,13 @@ public class EnemyAgent : MonoBehaviour
 
     [Header("Alert")] 
     [Description("Time to wait when NOT hearing the player before changing to patrol again")]
-    [SerializeField] private float _timeBeforePatrol = 3;
-    public float TimeBeforePatrol => _timeBeforePatrol;
+    [SerializeField] private float timeBeforePatrol = 3;
+    public float TimeBeforePatrol => timeBeforePatrol;
+    
+    [Header("Chase")]
+    [Description("Time to wait without seeing the character before changing to alert again")]
+    [SerializeField] private float timeBeforeAlert = 3;
+    public float TimeBeforeAlert => timeBeforeAlert;
     
     // --------------------------------------------------
 
@@ -149,7 +154,12 @@ public class EnemyAgent : MonoBehaviour
             out RaycastHit hit, 
             lookDistance
         );
+
+        // If didn't hit anything, didn't see the player
+        if (!hitSomething)
+            return false;
         
+        // If hit something, check that's the player 
         var playerController = hit.collider.GetComponent<PlayerController>();
         return playerController != null;
     }
