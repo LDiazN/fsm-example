@@ -19,13 +19,14 @@ public class EnemyAgent : MonoBehaviour
     {
         public bool canSeePlayer;
         public bool canHearPlayer;
+        public Vector3 lastHeardPosition;
     }
 
     #region AI State
 
     // --------------------------------------------------
     private IState[] states = new IState[3];
-    private State _currentState = State.Patrol;
+    public State _currentState = State.Patrol;
 
     private Perceptions _perceptions;
 
@@ -59,6 +60,12 @@ public class EnemyAgent : MonoBehaviour
     [Description("How near the agent should be to the waypoint to consider it within the waypoint")]
     [SerializeField] private float toleranceDistance = 0.1f;
     public float ToleranceDistance => toleranceDistance;
+
+    [Header("Alert")] 
+    [Description("Time to wait when NOT hearing the player before changing to patrol again")]
+    [SerializeField] private float _timeBeforePatrol = 3;
+    public float TimeBeforePatrol => _timeBeforePatrol;
+    
     // --------------------------------------------------
 
     #endregion
@@ -90,7 +97,7 @@ public class EnemyAgent : MonoBehaviour
 
         // Execute current state
         states[(uint)_currentState].Execute(this);
-    }
+   }
 
     public void ChangeState(State newState) => _currentState = newState;
 
@@ -98,6 +105,9 @@ public class EnemyAgent : MonoBehaviour
     {
         _perceptions.canSeePlayer = CanSeePlayer();
         _perceptions.canHearPlayer = CanHearPlayer();
+        
+        if (_perceptions.canHearPlayer)
+            _perceptions.lastHeardPosition = _playerController.transform.position;
         
         if (_perceptions.canSeePlayer)
             Debug.Log("Seeing Player!");
@@ -133,14 +143,15 @@ public class EnemyAgent : MonoBehaviour
         // Do the raycast for visibility at the end only if it passes every other check
         // TODO run several raycasts in arc to handle the almost-visible case
         toPlayer.Normalize();
-        bool hitPlayer = Physics.Raycast(
+        bool hitSomething = Physics.Raycast(
             transform.position, 
             toPlayer, 
             out RaycastHit hit, 
             lookDistance
         );
         
-        return hitPlayer;
+        var playerController = hit.collider.GetComponent<PlayerController>();
+        return playerController != null;
     }
 
     private bool CanHearPlayer()

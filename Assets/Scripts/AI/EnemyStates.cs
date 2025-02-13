@@ -97,21 +97,45 @@ namespace AI
     
     public class Alert : IState
     {
+        private float _timeSinceLastHeard;
+        private bool _starting = true;
+        private Quaternion _startRotation;
         public void Execute(EnemyAgent agent)
         {
+            // Check transitions before doing anything else
             var nextState = GetNextState(agent);
             if (nextState != EnemyAgent.State.Alert)
             {
+                // If leaving this state, look at your original orientation
+                agent.transform.rotation = _startRotation;
                 agent.ChangeState(nextState);
+                _starting = true;
                 return;
             }
             
+            // if first time, store original rotation to go back to that position
+            // when finished
+            if (_starting)
+            {
+                _starting = false;
+                _startRotation = agent.transform.rotation;
+            }
+            
+            agent.NavMeshAgent.isStopped = true;
+            
+            _timeSinceLastHeard += Time.deltaTime;
+            var perceptions = agent.GetPerceptions();
+            if (perceptions.canHearPlayer)
+                _timeSinceLastHeard = 0;
+            
+            // Look at the last position where the player was
+            agent.transform.LookAt(perceptions.lastHeardPosition);
         }
         
         private EnemyAgent.State GetNextState(EnemyAgent agent)
         {
             var perceptions = agent.GetPerceptions();
-            if (!perceptions.canHearPlayer && !perceptions.canSeePlayer)
+            if (!perceptions.canHearPlayer && !perceptions.canSeePlayer && _timeSinceLastHeard > agent.TimeBeforePatrol)
                 return EnemyAgent.State.Patrol;
             if (perceptions.canSeePlayer)
                 return EnemyAgent.State.Chase;
