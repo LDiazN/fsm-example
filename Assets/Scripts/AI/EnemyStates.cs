@@ -25,6 +25,7 @@ namespace AI
                 return;
             }
 
+            Debug.Log("Patrol state: " + _state);
             switch (_state)
             {
                 case PatrolState.Waiting:
@@ -67,7 +68,10 @@ namespace AI
             // that it should be moving, do that here:
             var currentWaypointPosition = GetCurrentWaypointPosition(agent);
             if ((currentWaypointPosition - agent.NavMeshAgent.destination).sqrMagnitude > 0.1)
+            {
                 agent.NavMeshAgent.destination = agent.Waypoints[_currentWaypoint].position;
+                agent.NavMeshAgent.isStopped = false;
+            }
                 
             _waitTimer += Time.deltaTime;
         }
@@ -87,6 +91,7 @@ namespace AI
         {
             _state = PatrolState.Moving;
             agent.NavMeshAgent.destination = agent.Waypoints[_currentWaypoint].position;
+            agent.NavMeshAgent.isStopped = false;
         }
 
         private void StartWaiting()
@@ -107,7 +112,9 @@ namespace AI
             if (nextState != EnemyAgent.State.Alert)
             {
                 // If leaving this state, look at your original orientation
-                agent.transform.rotation = _startRotation;
+                if (nextState == EnemyAgent.State.Patrol)
+                    agent.transform.rotation = _startRotation;
+                
                 agent.ChangeState(nextState);
                 _starting = true;
                 return;
@@ -129,7 +136,7 @@ namespace AI
                 _timeSinceLastHeard = 0;
             
             // Look at the last position where the player was
-            agent.transform.LookAt(perceptions.lastHeardPosition);
+            agent.transform.LookAt(perceptions.lastKnownPosition);
         }
         
         private EnemyAgent.State GetNextState(EnemyAgent agent)
@@ -146,21 +153,45 @@ namespace AI
     
     public class Chase : IState
     {
+
+        // Time since the last time the enemy knew something new 
+        // about the player
+        private float _timeSinceLastKnown;
         public void Execute(EnemyAgent agent)
         {
             var nextState = GetNextState(agent);
-            if (nextState != EnemyAgent.State.Alert)
+            if (nextState != EnemyAgent.State.Chase)
             {
                 agent.ChangeState(nextState);
                 return;
             }
             
+            // Chase the player as long as you see it 
+            var perceptions = agent.GetPerceptions();
+            Vector3 targetPosition = Vector3.zero;
+            
+            // If can see player, go to player
+            if (perceptions.canSeePlayer)
+                targetPosition = agent.Player.transform.position;
+            else // go to last known position
+                targetPosition = perceptions.lastKnownPosition;
+            
+            // Update time since last known: if it's too long, go to alert
+            _timeSinceLastKnown += Time.deltaTime;
+            if (perceptions.canHearPlayer || perceptions.canSeePlayer)
+                _timeSinceLastKnown = 0;
+            
+            agent.NavMeshAgent.destination = targetPosition;
+            
+            // Stop if you are close to the player
+            var distanceToPlayer = Vector3.SqrMagnitude(agent.transform.position - targetPosition);
+            agent.NavMeshAgent.isStopped = distanceToPlayer < agent.ToleranceDistance;
         }
         
         private EnemyAgent.State GetNextState(EnemyAgent agent)
         {
             var perceptions = agent.GetPerceptions();
-            if (!perceptions.canSeePlayer && !perceptions.canHearPlayer)
+            if (!perceptions.canSeePlayer && !perceptions.canHearPlayer && _timeSinceLastKnown > agent.TimeBeforeAlert)
                 return EnemyAgent.State.Alert;
 
             return EnemyAgent.State.Chase;

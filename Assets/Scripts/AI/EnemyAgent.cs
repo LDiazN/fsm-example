@@ -19,7 +19,7 @@ public class EnemyAgent : MonoBehaviour
     {
         public bool canSeePlayer;
         public bool canHearPlayer;
-        public Vector3 lastHeardPosition;
+        public Vector3 lastKnownPosition;
     }
 
     #region AI State
@@ -49,6 +49,17 @@ public class EnemyAgent : MonoBehaviour
     [Description("How far can this enemy hear the player. Depicted by yellow Gizmo")] [SerializeField]
     private float hearDistance = 1.5f;
 
+    [Description("If the bunny is allowed to see the player, useful for debugging")]
+    [SerializeField]
+    private bool canSeePlayer = true;
+
+    [Description("If the bunny is allowed to hear the player, useful for debugging")]
+    [SerializeField]
+    private bool canHearPlayer = true;
+
+    [Description("If this enemy is allowed to finish the game catching the player. Useful for debugging")]
+    [SerializeField] private bool canFinishGame = true;
+    
     [Header("Patrol")] 
     [SerializeField] private List<Transform> waypoints;
     public List<Transform> Waypoints => waypoints;
@@ -69,6 +80,9 @@ public class EnemyAgent : MonoBehaviour
     [Header("Chase")]
     [Description("Time to wait without seeing the character before changing to alert again")]
     [SerializeField] private float timeBeforeAlert = 3;
+
+    [Description("If the distance between the enemy and the last known position of the player is less than this, the enemy will stop moving")]
+    [SerializeField] private float toleranceToLastPosition = 0.1f;
     public float TimeBeforeAlert => timeBeforeAlert;
     
     // --------------------------------------------------
@@ -79,6 +93,7 @@ public class EnemyAgent : MonoBehaviour
 
     // --------------------------------------------------
     private PlayerController _playerController;
+    public GameObject Player => _playerController.gameObject;
     private NavMeshAgent _navMeshAgent;
     public NavMeshAgent NavMeshAgent => _navMeshAgent;
     // --------------------------------------------------
@@ -108,14 +123,12 @@ public class EnemyAgent : MonoBehaviour
 
     private void UpdatePerceptions()
     {
-        _perceptions.canSeePlayer = CanSeePlayer();
-        _perceptions.canHearPlayer = CanHearPlayer();
+        _perceptions.canSeePlayer = CanSeePlayer() && canSeePlayer;
+        _perceptions.canHearPlayer = CanHearPlayer() && canHearPlayer;
         
-        if (_perceptions.canHearPlayer)
-            _perceptions.lastHeardPosition = _playerController.transform.position;
         
-        if (_perceptions.canSeePlayer)
-            Debug.Log("Seeing Player!");
+        if (_perceptions.canSeePlayer || _perceptions.canHearPlayer)
+            _perceptions.lastKnownPosition = _playerController.transform.position;
     }
 
     private void InitState()
@@ -198,5 +211,23 @@ public class EnemyAgent : MonoBehaviour
         Vector3 leftIsh = Quaternion.AngleAxis(-halfAngle, Vector3.up) * transform.forward;
         Gizmos.DrawRay(transform.position, rightIsh * 1.5f * lookDistance);
         Gizmos.DrawRay(transform.position, leftIsh * 1.5f * lookDistance);
+    }
+
+    public void CatchPlayer()
+    {
+        var gameManager = FindObjectOfType<GameManager>();
+        if (gameManager == null)
+            return;
+        
+        gameManager.GameOver();
+    }
+
+    void OnCollisionEnter(Collision collision)
+    {
+        var playerController = collision.gameObject.GetComponent<PlayerController>();
+        if (playerController == null)
+            return;
+        
+        CatchPlayer();
     }
 }

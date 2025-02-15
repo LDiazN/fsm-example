@@ -688,9 +688,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9623dd13677d2d7468b6fd2c8a1b569e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  lookDistance: 2
+  _currentState: 0
+  lookDistance: 6.17
   visionAngle: 80
-  hearDistance: 1.5
+  hearDistance: 5.22
+  canSeePlayer: 1
+  canHearPlayer: 1
+  canFinishGame: 1
   waypoints:
   - {fileID: 1156201729}
   - {fileID: 679423809}
@@ -698,6 +702,9 @@ MonoBehaviour:
   - {fileID: 1242654184}
   timeToWait: 2
   toleranceDistance: 0.1
+  timeBeforePatrol: 3
+  timeBeforeAlert: 3
+  toleranceToLastPosition: 0.1
 --- !u!195 &662302590
 NavMeshAgent:
   m_ObjectHideFlags: 0
@@ -1499,12 +1506,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9623dd13677d2d7468b6fd2c8a1b569e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  lookDistance: 2
+  _currentState: 0
+  lookDistance: 7.17
   visionAngle: 80
-  hearDistance: 1.5
+  hearDistance: 5.36
+  canSeePlayer: 1
+  canHearPlayer: 1
+  canFinishGame: 1
   waypoints: []
   timeToWait: 2
   toleranceDistance: 0.1
+  timeBeforePatrol: 3
+  timeBeforeAlert: 3
+  toleranceToLastPosition: 0.1
 --- !u!195 &1376205336
 NavMeshAgent:
   m_ObjectHideFlags: 0
