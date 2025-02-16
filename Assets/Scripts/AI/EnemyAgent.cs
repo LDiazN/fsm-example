@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using UnityEngine.AI;
 using UnityEngine.Serialization;
 
+[RequireComponent(typeof(CapsuleCollider))]
 public class EnemyAgent : MonoBehaviour
 {
     public enum State
@@ -48,17 +49,6 @@ public class EnemyAgent : MonoBehaviour
 
     [Description("How far can this enemy hear the player. Depicted by yellow Gizmo")] [SerializeField]
     private float hearDistance = 1.5f;
-
-    [Description("If the bunny is allowed to see the player, useful for debugging")]
-    [SerializeField]
-    private bool canSeePlayer = true;
-
-    [Description("If the bunny is allowed to hear the player, useful for debugging")]
-    [SerializeField]
-    private bool canHearPlayer = true;
-
-    [Description("If this enemy is allowed to finish the game catching the player. Useful for debugging")]
-    [SerializeField] private bool canFinishGame = true;
     
     [Header("Patrol")] 
     [SerializeField] private List<Transform> waypoints;
@@ -85,6 +75,19 @@ public class EnemyAgent : MonoBehaviour
     [SerializeField] private float toleranceToLastPosition = 0.1f;
     public float TimeBeforeAlert => timeBeforeAlert;
     
+    [Header("Debugging")]
+    
+    [Description("If the bunny is allowed to see the player, useful for debugging")]
+    [SerializeField]
+    private bool canSeePlayer = true;
+    
+    [Description("If the bunny is allowed to hear the player, useful for debugging")]
+    [SerializeField]
+    private bool canHearPlayer = true;
+    
+    [Description("If this enemy is allowed to finish the game catching the player. Useful for debugging")]
+    [SerializeField] private bool canFinishGame = true;
+    
     // --------------------------------------------------
 
     #endregion
@@ -92,10 +95,25 @@ public class EnemyAgent : MonoBehaviour
     #region Internal State
 
     // --------------------------------------------------
+    /// <summary>
+    /// Player controller component attached to the player.
+    /// Do not assume the player exists in scene, this component
+    /// can be null
+    /// </summary>
     private PlayerController _playerController;
     public GameObject Player => _playerController.gameObject;
     private NavMeshAgent _navMeshAgent;
     public NavMeshAgent NavMeshAgent => _navMeshAgent;
+    
+    // Used to get the original look at rotation 
+    // when coming back from a chase.
+    // Useful for enemies with 0 waypoints (watchers)
+    private Quaternion _originalRotation;
+    
+    public Quaternion OriginalRotation => _originalRotation;
+    
+    private CapsuleCollider _capsuleCollider;
+    public CapsuleCollider CapsuleCollider => _capsuleCollider;
     // --------------------------------------------------
 
     #endregion
@@ -103,12 +121,24 @@ public class EnemyAgent : MonoBehaviour
     private void Awake()
     {
         _navMeshAgent = GetComponent<NavMeshAgent>();
+        _capsuleCollider = GetComponent<CapsuleCollider>();
     }
 
     void Start()
     {
-        InitState();
+        InitStates();
         _playerController = FindObjectOfType<PlayerController>();
+        
+        _originalRotation = transform.rotation;
+        
+        // If no waypoints are provided, consider your initial position as a waypoint.
+        // That will help you generalize behaviour
+        if (waypoints.Count == 0)
+        {
+            var newWaypoint = new GameObject($"${this.gameObject.name}__point");
+            newWaypoint.transform.position = transform.position;
+            waypoints.Add(newWaypoint.transform);
+        }
     }
 
     void Update()
@@ -131,7 +161,7 @@ public class EnemyAgent : MonoBehaviour
             _perceptions.lastKnownPosition = _playerController.transform.position;
     }
 
-    private void InitState()
+    private void InitStates()
     {
         _currentState = State.Patrol;
         states[(uint)State.Patrol] = new Patrol();
@@ -160,9 +190,15 @@ public class EnemyAgent : MonoBehaviour
 
         // Do the raycast for visibility at the end only if it passes every other check
         // TODO run several raycasts in arc to handle the almost-visible case
+        
+        // There is a weird bug where the raycast starts in the floor and sometimes
+        // it detects the floor before the player. 
+        // We solve this by casting a ray from the center of the collider
         toPlayer.Normalize();
+        var colliderCenter = transform.position + _capsuleCollider.center;
+        Debug.DrawRay(colliderCenter, toPlayer, Color.cyan);
         bool hitSomething = Physics.Raycast(
-            transform.position, 
+            colliderCenter, 
             toPlayer, 
             out RaycastHit hit, 
             lookDistance

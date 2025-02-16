@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using UnityEngine;
 
 namespace AI
@@ -25,7 +26,6 @@ namespace AI
                 return;
             }
 
-            Debug.Log("Patrol state: " + _state);
             switch (_state)
             {
                 case PatrolState.Waiting:
@@ -64,14 +64,6 @@ namespace AI
                 return;
             }
             
-            // Sometimes if you come from another state, the nav mesh agent won't know
-            // that it should be moving, do that here:
-            var currentWaypointPosition = GetCurrentWaypointPosition(agent);
-            if ((currentWaypointPosition - agent.NavMeshAgent.destination).sqrMagnitude > 0.1)
-            {
-                agent.NavMeshAgent.destination = agent.Waypoints[_currentWaypoint].position;
-                agent.NavMeshAgent.isStopped = false;
-            }
                 
             _waitTimer += Time.deltaTime;
         }
@@ -80,52 +72,48 @@ namespace AI
 
         private void UpdateMoving(EnemyAgent agent)
         {
-            // If too far, just keep moving
-            if (agent.NavMeshAgent.remainingDistance > agent.ToleranceDistance)
-                return;
+            var currentPosition = GetCurrentWaypointPosition(agent);
+            agent.NavMeshAgent.destination = currentPosition;
+            agent.NavMeshAgent.isStopped = false;
             
-            StartWaiting();
+            var distanceToWaypoint = (currentPosition - agent.transform.position).sqrMagnitude;
+            if (distanceToWaypoint < agent.ToleranceDistance * agent.ToleranceDistance)
+            {
+                StartWaiting(agent);
+            }
         }
 
         private void StartMoving(EnemyAgent agent)
         {
             _state = PatrolState.Moving;
-            agent.NavMeshAgent.destination = agent.Waypoints[_currentWaypoint].position;
             agent.NavMeshAgent.isStopped = false;
         }
 
-        private void StartWaiting()
+        private void StartWaiting(EnemyAgent agent)
         {
             _state = PatrolState.Waiting;
+            agent.NavMeshAgent.isStopped = true;
+
+            // The watcher enemy
+            if (agent.Waypoints.Count == 1)
+            {
+                agent.transform.rotation = Quaternion.Euler(0, agent.OriginalRotation.eulerAngles.y, 0);
+            }
         }
     }
     
     public class Alert : IState
     {
         private float _timeSinceLastHeard;
-        private bool _starting = true;
-        private Quaternion _startRotation;
+        
         public void Execute(EnemyAgent agent)
         {
             // Check transitions before doing anything else
             var nextState = GetNextState(agent);
             if (nextState != EnemyAgent.State.Alert)
             {
-                // If leaving this state, look at your original orientation
-                if (nextState == EnemyAgent.State.Patrol)
-                    agent.transform.rotation = _startRotation;
-                
                 agent.ChangeState(nextState);
-                _starting = true;
                 return;
-            }
-            
-            // if first time, store original rotation to go back to that position
-            // when finished
-            if (_starting)
-            {
-                _starting = false;
-                _startRotation = agent.transform.rotation;
             }
             
             agent.NavMeshAgent.isStopped = true;
@@ -135,8 +123,11 @@ namespace AI
             if (perceptions.canHearPlayer)
                 _timeSinceLastHeard = 0;
             
-            // Look at the last position where the player was
-            agent.transform.LookAt(perceptions.lastKnownPosition);
+            // Look at the last position where the player was.
+            // If the enemy is already in the same position as the last position, don't 
+            // do look at because it can cause the enemy to look down the ground
+            if ((agent.transform.position - perceptions.lastKnownPosition).sqrMagnitude > 1)
+                agent.transform.LookAt(perceptions.lastKnownPosition);
         }
         
         private EnemyAgent.State GetNextState(EnemyAgent agent)

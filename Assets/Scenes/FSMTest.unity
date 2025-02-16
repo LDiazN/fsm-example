@@ -701,7 +701,7 @@ MonoBehaviour:
   - {fileID: 345917338}
   - {fileID: 1242654184}
   timeToWait: 2
-  toleranceDistance: 0.1
+  toleranceDistance: 0.2
   timeBeforePatrol: 3
   timeBeforeAlert: 3
   toleranceToLastPosition: 0.1
@@ -1501,7 +1501,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1093000920}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9623dd13677d2d7468b6fd2c8a1b569e, type: 3}
   m_Name: 
