@@ -247,6 +247,13 @@ public class EnemyAgent : MonoBehaviour
         Vector3 leftIsh = Quaternion.AngleAxis(-halfAngle, Vector3.up) * transform.forward;
         Gizmos.DrawRay(transform.position, rightIsh * 1.5f * lookDistance);
         Gizmos.DrawRay(transform.position, leftIsh * 1.5f * lookDistance);
+
+
+        if (_playerController)
+        {
+            Gizmos.color = Color.cyan;
+            Gizmos.DrawWireSphere(_perceptions.lastKnownPosition, 0.5f);
+        }
     }
 
     public void CatchPlayer()
