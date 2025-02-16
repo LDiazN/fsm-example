@@ -16,7 +16,7 @@ namespace AI
         
         public void Execute(EnemyAgent agent)
         {
-            // If should change to a new state, 
+            // If you should change to a new state, 
             // change and return
             var nextState = GetNextState(agent);
             if (nextState != EnemyAgent.State.Patrol)
@@ -39,10 +39,10 @@ namespace AI
         private EnemyAgent.State GetNextState(EnemyAgent agent)
         {
             var perceptions = agent.GetPerceptions();
-            if (perceptions.canSeePlayer)
+            if (perceptions.CanSeePlayer)
                 return EnemyAgent.State.Chase;
 
-            if (perceptions.canHearPlayer)
+            if (perceptions.CanHearPlayer)
                 return EnemyAgent.State.Alert;
 
             return EnemyAgent.State.Patrol;

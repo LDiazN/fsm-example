@@ -19,17 +19,17 @@ namespace AI
             
             // Chase the player as long as you see it 
             var perceptions = agent.GetPerceptions();
-            Vector3 targetPosition = Vector3.zero;
+            Vector3 targetPosition;
             
-            // If can see player, go to player
-            if (perceptions.canSeePlayer)
+            // If you can see player, go to player
+            if (perceptions.CanSeePlayer)
                 targetPosition = agent.Player.transform.position;
             else // go to last known position
-                targetPosition = perceptions.lastKnownPosition;
+                targetPosition = perceptions.LastKnownPosition;
             
             // Update time since last known: if it's too long, go to alert
             _timeSinceLastKnown += Time.deltaTime;
-            if (perceptions.canHearPlayer || perceptions.canSeePlayer)
+            if (perceptions.CanHearPlayer || perceptions.CanSeePlayer)
                 _timeSinceLastKnown = 0;
             
             agent.NavMeshAgent.destination = targetPosition;
@@ -42,7 +42,7 @@ namespace AI
         private EnemyAgent.State GetNextState(EnemyAgent agent)
         {
             var perceptions = agent.GetPerceptions();
-            if (!perceptions.canSeePlayer && !perceptions.canHearPlayer && _timeSinceLastKnown > agent.TimeBeforeAlert)
+            if (!perceptions.CanSeePlayer && !perceptions.CanHearPlayer && _timeSinceLastKnown > agent.TimeBeforeAlert)
                 return EnemyAgent.State.Alert;
 
             return EnemyAgent.State.Chase;
